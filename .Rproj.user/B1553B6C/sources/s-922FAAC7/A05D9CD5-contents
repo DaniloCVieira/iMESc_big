@@ -518,7 +518,7 @@ output$package_refs<-renderPrint({
   })
 
 
-  options(shiny.maxRequestSize=30*1024^2)
+  options(shiny.maxRequestSize=30*1024^10)
   saved_base_shape<-  reactiveValues(df=0)
   saved_layer_shape<-  reactiveValues(df=0)
   saved_coords<-  reactiveValues(df=0)
@@ -940,7 +940,7 @@ output$fac_levels<- renderUI({
                        column(12,
                               p("Drag and drop the labels to define their levels and click",span("'",icon("fas fa-arrow-right"),"'")," to pre-save the variable",style='white-space: normal;'),
                               splitLayout(  cellWidths = c("80%","20%"),
-                                            div(sortableTableOutput("toorder_in"),style="font-size: 11px;"),
+                                            div(uiOutput("toorder_in"),style="font-size: 11px;"),
                                             div(uiOutput("toorder_lev"),style="font-size: 11px")
                               )),
                        popify(actionButton("create_ordinal",div(popify(icon("fas fa-arrow-right"),'Create new ordinal factor'),style='white-space: normal;')),NULL,"Create new ordinal factor"),
@@ -962,7 +962,7 @@ getlevels<-reactive({
   req(input$to_ordinal)
   data.frame(label=levels(attr(saved_data$df[[input$data_upload]],"data.factors")[,input$to_ordinal]))
 })
-output$toorder_lev<-renderTable(
+output$toorder_lev<-renderPrint(
   data.frame(level=1:nlevels(attr(saved_data$df[[input$data_upload]],"data.factors")[,input$to_ordinal]))
 )
 getres<-reactive({
@@ -987,13 +987,15 @@ data=attr(saved_data$df[[input$data_upload]],"data.factors")
 })
 
 
-output$toorder_in <- renderTable(getlevels())
+output$toorder_in <- renderUI(
+  fluidRow(renderPrint(getlevels()))
+)
 output$toorder_out<-renderUI({
   res<-
     unlist(lapply(new_facts$df[input$to_ordinal], function (x) identical(x,as.vector(getres()))))
   column(12,
     renderPrint(paste("pre-saved:",res)),
-    renderTable({
+    renderPrint({
       get_newlevels()
       new_facts$df})
 
@@ -1610,8 +1612,9 @@ output$binary_preview<-renderUI({
     {
       column(12,
              style="overflow-x: scroll;height:300px;overflow-y: scroll",
-             column(12,renderTable(
-               getdata_upload())))
+             column(12,renderPrint(
+               getdata_upload()
+             )))
     } else if(hand_save$df=="Save Clusters")
     {
       hc <- phc()
@@ -1625,14 +1628,14 @@ output$binary_preview<-renderUI({
     {
       column(12,
              style="overflow-x: scroll;height:300px;overflow-y: scroll",
-            column(12,renderTable(
+            column(12,renderPrint(
                aggreg()
              )))
     } else if(hand_save$df=="Create a datalist with the variables selected in the Random Forest Explainer")
     {
       column(12,
              style="overflow-x: scroll;height:300px;overflow-y: scroll",
-             column(12,renderTable(
+             column(12,renderPrint(
                getdata_rf02()[,rf_sigs$df$variable]
              )))
 
@@ -1641,7 +1644,7 @@ output$binary_preview<-renderUI({
 
       column(12,
              style="overflow-x: scroll;height:300px;overflow-y: scroll",
-             column(12,renderTable(
+             column(12,renderPrint(
                getclassmat(attr(data, 'data.factors')[,input$to_classmat,drop=F])
              )))
     }
@@ -2769,7 +2772,7 @@ output$shp_create<-renderUI({
                           column(
                             12,
                             column(2, checkboxInput("sugtopo", NULL, value =
-                                                      TRUE)),
+                                                      F)),
                             column(10, style = "margin-top: 9px; margin-left:-10px;",
 
                                    p(
@@ -4057,7 +4060,7 @@ output$pwrda_print<-renderPrint({
    factors<-attr(data,"factors")
     #aggregate(data,faclist,call(as.character(input$spread_measures)))
     list(
-      DT::renderDataTable({cbind(factors,data)})
+      renderPrint({cbind(factors,data)})
     )
 
 
@@ -4234,7 +4237,7 @@ output$pwrda_print<-renderPrint({
 
 
 
-      DT::renderDataTable(getdata_upload())
+      renderPrint(getdata_upload())
 
 
     )
@@ -4305,12 +4308,7 @@ output$pwrda_print<-renderPrint({
     selall$df<-NULL
   })
 
-  output$x1_factors = DT::renderDataTable( {
 
-    attr(getdata_upload(),"factors")
-  }, server = FALSE ,filter = "top",
-  selection = list(mode = 'multiple', selected = c(selall$df)),
-  options=list(pageLength = 10, info = FALSE,lengthMenu = list(c(10,20, -1), c("15", "20","All")) ))
 
   output$viewcoords<-renderUI({
     if(is.null(attr(getdata_upload(),"coords"))) {fluidRow(
@@ -4331,7 +4329,7 @@ output$pwrda_print<-renderPrint({
     )} else{
       fluidRow(
         h5(strong("Coords-Attribute"),tipify(actionButton("downcenter_coords",icon("fas fa-download")),"Download table", options=list(container="body"))),
-        DT::renderDataTable(attr(getdata_upload(),"coords"))
+        renderPrint(attr(getdata_upload(),"coords"))
 
       )
     }
@@ -5464,14 +5462,14 @@ output$tools_bar<-renderUI({
         column(4, numericInput(
           'xdim',
           "xdim",
-          value = xdim,
+          value = 6,
           min = 0,
           step = 1
         )),
         column(4, numericInput(
           "ydim",
           "ydim",
-          value = ydim,
+          value = 6,
           min = 0,
           step = 1
         )),
@@ -7736,12 +7734,8 @@ colnames(Parameters)<-"Training Parameters"
   })
   output$train.summary <- renderPrint({
     train.summary()
-  }, rownames = T)
-  output$data.summary <- renderTable({
-    data <- getdata_upload()
-    psummary(data)
-
   })
+
 
 
 
